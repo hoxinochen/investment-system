@@ -1,0 +1,11 @@
+# macOS metadata
+.DS_Store
+**/.DS_Store
+._*
+**/._*
+.AppleDouble/
+
+# Temporary editor and office lock files
+*.swp
+*.swo
+~$*

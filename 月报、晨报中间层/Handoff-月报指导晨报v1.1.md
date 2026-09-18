@@ -1,0 +1,436 @@
+SCHEMA_NAME: Monthly-to-Daily Research Handoff  
+SCHEMA_VERSION: 1.1  
+STATUS: FROZEN  
+SUPERSEDES: Monthly-to-Daily Research Handoff Schema v1.0  
+AUTHORITY_ROLE: Handoff Producer Contract  
+SCOPE: Frozen Monthly Final -> Self-contained Daily Research Prior  
+RETENTION_POLICY: PERMANENT  
+  
+============================================================  
+1. PURPOSE  
+============================================================  
+本 Schema 规定 Monthly-to-Daily Research Handoff（月报→晨报研究交接快照）的生成结构、边界、激活方式与跨周期执行语义。  
+  
+核心目标：  
+- 把已冻结 Monthly Final 的最终研究状态压缩成下一阶段晨报可直接消费的 Research Prior（研究先验）；  
+- 避免晨报每天重读完整 Monthly Final；  
+- 避免研究连续性依赖 Chat 上下文；  
+- 与 Daily Audit Ledger 共同形成 Snapshot + Event Stream（快照 + 事件流）；  
+- 把月度 Attention Calibration（注意力校准）结果编译成有限、明确、可执行的 Priority Directives（研究优先级指令），避免依赖模型自行领会自然语言。  
+  
+Handoff 保存的是“进入下一阶段时从什么世界模型和研究注意力状态开始工作”，不是月报全文摘要，也不是新的预测记录或方法 Authority。  
+  
+============================================================  
+2. PRODUCER / CONSUMER BOUNDARY  
+============================================================  
+本 Schema 是 Writer Contract / Producer Contract（写入契约）。  
+  
+只有 Handoff Generator 在从已冻结 Monthly Final 生成 Handoff 时读取本 Schema。  
+  
+晨报运行时：  
+- 直接读取 Active Handoff；  
+- 不读取 [INV-MONTHLY][HANDOFF-SCHEMA]；  
+- 不依赖 Schema 才能解释一个已生成的 Handoff；  
+- Handoff 必须自包含全部晨报需要执行的字段与语义。  
+  
+如果未来 Schema 发生不兼容变化，应通过新的 Schema / Morning Prompt 版本治理处理，而不是让晨报运行时反复读取 Schema 来“猜”格式。  
+  
+============================================================  
+3. AUTHORITY BOUNDARY  
+============================================================  
+Handoff IS:  
+- Frozen Research Prior derived from an approved Monthly Final  
+- Starting State for the next daily research cycle  
+- Compact operational projection of the Monthly Final  
+- Initial research-attention state at VALID_FROM  
+  
+Handoff IS NOT:  
+- Monthly Research Methodology Authority  
+- Daily Morning Report Method Authority  
+- Audit Protocol Authority  
+- Prediction Record Authority  
+- Reality Authority  
+  
+权威关系：  
+- [INV-MONTHLY][AUTHORITY]：规定月报如何研究、如何做 Attention Calibration；  
+- [INV-MONTHLY][FINAL]：保存经过 Challenge Phase 后冻结的正式月度研究成果；  
+- 本 Schema：规定如何把 Final 编译为 Handoff；  
+- [INV-MONTHLY][HANDOFF]：晨报直接消费的自包含快照；  
+- [INV-AUDIT][SPEC]：规定日度事件如何记录；  
+- [INV-AUDIT][DAILY]：保存正式 Forecast / Baseline / Hypothesis / Method / Research Priority 等事件历史。  
+  
+Handoff 不得覆盖、修改或重新定义上述任何 Authority。  
+  
+============================================================  
+4. CREATION & ACTIVATION  
+============================================================  
+只有来源 Monthly Final 明确处于 FINAL_FROZEN 后，才允许创建对应 Handoff。  
+  
+Handoff 生命周期：DRAFT -> 用户审阅 / 批准 -> FROZEN。  
+只有 STATUS: FROZEN 的 Handoff 可作为晨报 Research Prior。  
+  
+Subject 严格格式：  
+[INV-MONTHLY][HANDOFF] YYYY-MM  
+  
+YYYY-MM 表示 Handoff 激活所在自然月，不代表月初生效。  
+  
+必须使用真实时间：  
+CREATED_AT: 实际创建时间  
+VALID_FROM: 实际批准 / 激活时间  
+VALID_UNTIL: SUPERSEDED  
+  
+严禁为了月份整齐回填 VALID_FROM。  
+新 Handoff 激活后，旧 Handoff 不删除、不修改；旧 Handoff 在新 VALID_FROM 后被 supersede。  
+  
+============================================================  
+5. REQUIRED METADATA  
+============================================================  
+每封正式 Handoff 至少包含：  
+  
+SCHEMA_NAME: Monthly-to-Daily Research Handoff  
+SCHEMA_VERSION: 1.1  
+STATUS: FROZEN  
+HANDOFF_PERIOD: YYYY-MM  
+CREATED_AT: ISO-8601 timestamp  
+VALID_FROM: ISO-8601 timestamp  
+VALID_UNTIL: SUPERSEDED  
+  
+SOURCE_MONTHLY_FINAL: [INV-MONTHLY][FINAL] YYYY-MM  
+SOURCE_MONTHLY_FINAL_VERSION:  
+MONTHLY_AUTHORITY_VERSION:  
+AUDIT_SPEC_VERSION:  
+  
+不得从未冻结 Review Draft 生成正式 Handoff。  
+  
+============================================================  
+6. BASELINE_SEED  
+============================================================  
+保存 Handoff 激活时的 Starting World Model。按可独立变化维度拆分，不为模板完整硬填。  
+  
+示意：  
+BASELINE_SEED:  
+CHINA_AGGREGATE_DEMAND:  
+  state:  
+  confidence:  
+CHINA_STRUCTURAL_GROWTH:  
+  state:  
+  confidence:  
+US_GROWTH:  
+  state:  
+  confidence:  
+US_INFLATION:  
+  state:  
+  confidence:  
+FED_REACTION_FUNCTION:  
+  state:  
+  confidence:  
+US_LONG_END:  
+  state:  
+  confidence:  
+AI_INDUSTRY:  
+  state:  
+  confidence:  
+  
+============================================================  
+7. SCENARIO_SEED  
+============================================================  
+只保存晨报下一阶段需要继承的当前情景与关键 Watch State，不复制完整情景树。  
+  
+SCENARIO_SEED:  
+PRIMARY_STATE:  
+  state:  
+  description:  
+WATCH_STATES:  
+  - ...  
+  
+============================================================  
+8. ACTIVE_THESES  
+============================================================  
+只保存下一阶段仍有决策 / 研究价值的核心结论。  
+  
+ACTIVE_THESES:  
+THESIS_01:  
+  topic:  
+  thesis:  
+  status: ACTIVE  
+  source_final_section:  
+  
+THESIS 不自动等于 Forecast。  
+  
+============================================================  
+9. ACTIVE_FORECAST_REFERENCES  
+============================================================  
+只引用 Handoff 激活时仍处于评价窗口、尚未完成评价的正式 Forecast。  
+  
+ACTIVE_FORECAST_REFERENCES:  
+- forecast_id:  
+  origin_daily:  
+  evaluation_window:  
+  status: OPEN  
+  
+Prediction Authority 始终是原始 Daily Ledger。Handoff 不得改变 Forecast 的 judgment、direction、confidence、evaluation_rule、invalidation 或生命周期。  
+  
+============================================================  
+10. OPEN_HYPOTHESES  
+============================================================  
+保存月底仍未解决、且下一阶段值得继续检验的机制假说。  
+  
+OPEN_HYPOTHESES:  
+HYPOTHESIS_01:  
+  hypothesis_id: OPTIONAL  
+  topic:  
+  hypothesis:  
+  status: OPEN / STRENGTHENED / WEAKENED  
+  source_pointer:  
+  
+若源自 Daily Ledger，应保留原 hypothesis_id。  
+  
+============================================================  
+11. VALIDATION_TARGETS  
+============================================================  
+围绕研究问题而非单独数据点，推荐 3–10 个真正重要目标。  
+  
+VALIDATION_TARGETS:  
+VT_01:  
+  target:  
+  linked_thesis:  
+  linked_hypothesis: OPTIONAL  
+  indicators:  
+    - ...  
+  positive_confirmation:  
+  disconfirming_signal:  
+  baseline_relevance:  
+  
+============================================================  
+12. STATE_TRANSITION_TRIGGERS  
+============================================================  
+保存供晨报识别状态迁移的关键触发条件。  
+  
+STATE_TRANSITION_TRIGGERS:  
+TRIGGER_01:  
+  from_state:  
+  watch_state:  
+  condition:  
+  confirmation:  
+  affected_baseline:  
+  
+晨报必须区分 NOISE / TRIGGER / CONFIRMATION。单项数据通常只能进入 Watch，除非满足确认规则或足以形成正式 BASELINE_CHANGED。  
+  
+============================================================  
+13. ASSET_PRICING_PRIORS  
+============================================================  
+保存重要资产定价先验，不是买卖指令。  
+  
+ASSET_PRICING_PRIORS:  
+ASSET_OR_THEME:  
+  fundamentals:  
+  earnings_or_cashflow:  
+  valuation_constraint:  
+  dominant_drivers:  
+    - ...  
+  price_direction_confidence:  
+  
+必须保留 Dominant Driver 与基本面判断 / 价格方向置信度的区别。Handoff 不得把定价先验升级成新的 Forecast。  
+  
+============================================================  
+14. MORNING_RESEARCH_PRIORITIES  
+============================================================  
+保存下一阶段晨报优先研究 / 验证的问题摘要，推荐 3–8 项。  
+  
+MORNING_RESEARCH_PRIORITIES:  
+15. ...  
+16. ...  
+  
+该字段是 Human-readable Summary（人类可读摘要），不是执行指令 Authority。  
+  
+如果 MORNING_RESEARCH_PRIORITIES 与 RESEARCH_PRIORITY_DIRECTIVES 在注意力分配上发生冲突，以 RESEARCH_PRIORITY_DIRECTIVES 为准。  
+  
+============================================================  
+17. RESEARCH_PRIORITY_DIRECTIVES  
+============================================================  
+该字段把 Monthly Attention Calibration 的结果编译成晨报可以稳定执行的有限控制指令。  
+  
+严禁用自由文本发明新的 action。action 只允许：  
+- ADD  
+- RAISE  
+- MAINTAIN  
+- LOWER  
+- EVENT_TRIGGER_ONLY  
+- REFOCUS  
+- DROP  
+  
+通用结构：  
+  
+RESEARCH_PRIORITY_DIRECTIVES:  
+DIRECTIVE_01:  
+  topic_key:  
+  topic:  
+  action:  
+  reason:  
+  focus_on:  
+    - ...  
+  stop_researching:  
+    - ...  
+  trigger_condition:  
+  reentry_condition:  
+  review_window:  
+  source_final_section:  
+  
+字段要求按 action 变化，禁止为模板完整硬填。  
+  
+15.1 ADD  
+含义：把此前不属于当前常规研究重点的主题加入主动研究池。  
+最低要求：topic_key, topic, action, reason, focus_on, review_window。  
+  
+15.2 RAISE  
+含义：提高现有主题的相对研究权重；信息预算冲突时优先于普通主题。  
+最低要求：topic_key, action, reason, focus_on, review_window。  
+不得因此自动提高 Forecast / Baseline / Hypothesis 置信度。  
+  
+15.3 MAINTAIN  
+含义：月度审计确认现有研究权重合理，继续保持。  
+最低要求：topic_key, action, reason, review_window。  
+MAINTAIN 不等于“永久继承”。下一月仍需重新取得资格。  
+  
+15.4 LOWER  
+含义：主题仍保留在主动研究池，但降低相对权重。  
+最低要求：topic_key, action, reason, review_window。  
+  
+15.5 EVENT_TRIGGER_ONLY  
+含义：退出常规主动研究，不再为了该主题每日主动扩展；只有 trigger_condition 满足时才重新展开研究。  
+最低要求：topic_key, action, reason, trigger_condition, review_window。  
+  
+15.6 REFOCUS  
+含义：主题继续保留，但研究问题必须改变；用于停止重复充分性证据，转向判别性证据、竞争解释、反事实或新的验证问题。  
+最低要求：topic_key, action, reason, focus_on, stop_researching, review_window。  
+晨报不得继续把 stop_researching 中的问题作为该主题的主要研究任务，除非出现真正的新机制证据。  
+  
+15.7 DROP  
+含义：主题退出下一周期常规研究池。普通新闻、重复行情或单条低强度信息不得自动使其重新进入。  
+最低要求：topic_key, action, reason, reentry_condition。  
+满足 reentry_condition 后，晨报仍应依据当时有效 Audit SPEC 创建新的 RESEARCH_PRIORITY_CHANGED，才把该主题重新纳入跨日研究状态。  
+  
+============================================================  
+16. PRIORITY DIRECTIVE EXECUTION BOUNDARY  
+============================================================  
+Priority Directive 可以改变：  
+- 研究对象是否进入主动研究池；  
+- 相对研究权重；  
+- 当前需要验证的问题；  
+- 哪些重复问题应停止研究；  
+- 事件触发 / 退出 / 重新进入条件。  
+  
+Priority Directive 不得改变：  
+- Forecast Schema；  
+- Audit 写入协议；  
+- 证据等级标准；  
+- Reality Authority；  
+- Prediction Authority；  
+- Monthly / Morning Method Authority；  
+- 已冻结历史记录。  
+  
+任何真正的方法变化必须走 METHOD_CHANGED 及对应治理，不得通过 Handoff 偷渡。  
+  
+============================================================  
+17. DAILY EVENT PRECEDENCE  
+============================================================  
+Handoff Priority Directives 是 VALID_FROM 时点的初始注意力状态，不是永久命令。  
+  
+Current Research Priority at T  
+= Active Handoff RESEARCH_PRIORITY_DIRECTIVES  
++ all relevant RESEARCH_PRIORITY_CHANGED events after Handoff VALID_FROM and before T  
+  
+对于同一 topic_key：  
+- VALID_FROM 之后更晚的正式 Daily RESEARCH_PRIORITY_CHANGED 覆盖 Handoff 初始 Directive；  
+- 新 Handoff 激活后，以新 Handoff 为新的 Snapshot 起点，再叠加其后的 Daily Events。  
+  
+Reality Evidence 始终可以触发新的研究状态事件；DROP / EVENT_TRIGGER_ONLY 不是禁止观察现实，而是限制常规主动研究预算。  
+  
+============================================================  
+18. KNOWN_UNCERTAINTIES  
+============================================================  
+保存尚未解决的重要不确定性，防止晨报把暂时占优的解释当事实。  
+  
+KNOWN_UNCERTAINTIES:  
+- ...  
+  
+优先记录主解释 vs 替代解释、数据修订风险、尚未验证的传导链、可能改变 Dominant Driver 的变量。  
+  
+============================================================  
+19. DO_NOT_CARRY_FORWARD  
+============================================================  
+显式记录不应继续污染下一阶段研究上下文的内容，例如：已完成评价的问题、已关闭假说、已失效 Forecast、纯历史一次性新闻、无持续机制意义的旧叙事。  
+  
+DO_NOT_CARRY_FORWARD 负责 Research Compression / Context Garbage Collection，不负责研究优先级执行。  
+  
+如果一个主题需要明确退出主动研究，必须同时存在 RESEARCH_PRIORITY_DIRECTIVES 中的 DROP 或 EVENT_TRIGGER_ONLY；晨报不得仅凭 DO_NOT_CARRY_FORWARD 猜测注意力动作。  
+  
+============================================================  
+20. CURRENT STATE RECONSTRUCTION  
+============================================================  
+Current Research State at T  
+= Latest Valid FROZEN Handoff with VALID_FROM <= T  
++ all relevant Daily Ledger Events after that Handoff VALID_FROM and before T  
+  
+典型增量事件包括：  
+- BASELINE_CHANGED  
+- BASELINE_CONFIDENCE_CHANGED  
+- FORECAST_CREATED  
+- FORECAST_CONFIDENCE_CHANGED  
+- HYPOTHESIS_CREATED  
+- HYPOTHESIS_STATUS_CHANGED  
+- METHOD_CHANGED  
+- RESEARCH_PRIORITY_CHANGED  
+  
+历史 Daily Ledger 始终按其自身 SPEC_VERSION 解释。  
+  
+============================================================  
+21. DUPLICATE & CONFLICT HANDLING  
+============================================================  
+本节区分 Producer 与 Consumer。  
+  
+Handoff Generator 读取 Schema 时：  
+- 0 个可用冻结 Schema -> HANDOFF_SCHEMA_UNAVAILABLE；  
+- 多个同版本冻结 Schema -> HANDOFF_SCHEMA_DUPLICATE，fail-closed；  
+- 多个不同冻结版本 -> 使用语义版本号最高且适用于当前生成任务的版本。  
+  
+晨报运行时不读取 Schema。  
+  
+晨报读取 Handoff 时：  
+- 只使用 STATUS: FROZEN；  
+- 只使用 VALID_FROM <= 当前任务开始时间；  
+- 若多个 Handoff 有效区间冲突且无法通过 VALID_FROM 唯一确定最新状态 -> HANDOFF_AMBIGUOUS；  
+- 读取异常不得阻断晨报正文生成。  
+  
+============================================================  
+22. FAILURE HANDLING  
+============================================================  
+若没有可用 Active Handoff、出现歧义或读取失败：  
+- 晨报仍完成正常研究与输出；  
+- 不得读取 Handoff Schema 作为运行时补救；  
+- 不得用聊天记忆、旧 Monthly Final 或任意旧 Handoff 冒充当前 Research Prior；  
+- Audit Ledger 持久化仍由 [INV-AUDIT][SPEC] 独立治理。  
+  
+============================================================  
+23. IMMUTABILITY & VERSIONING  
+============================================================  
+Schema 与正式 Handoff 均遵循 write-once-read-many。  
+允许 READ / SEARCH；禁止 UPDATE / SEND / DELETE / REPLACE / overwrite。  
+  
+Schema v1.0 永久保留原样；本 v1.1 不修改 v1.0。  
+已冻结 Handoff 不得更新为“最新状态”；月内变化进入 Daily Ledger，下一份 Monthly Final 冻结后再生成新 Handoff。  
+  
+============================================================  
+24. LANGUAGE & HUMAN READABILITY  
+============================================================  
+机器字段与 enum 保持稳定英文。  
+面向用户展示时，把机器状态转换成自然中文；真正的经济学、金融、统计、公司财务英文术语可中英标注。  
+  
+============================================================  
+25. DESIGN PRINCIPLE  
+============================================================  
+Monthly Final -> Handoff Generator obeys Handoff Schema -> Self-contained Handoff Snapshot -> Daily Event Stream -> Next Monthly Audit -> Next Monthly Final  
+  
+Monthly 负责判断并校准；Schema 负责把判断编译成稳定契约；Morning 负责执行 Active Handoff + later Daily Events。  
+  
+不要依赖“月报写得聪明、晨报读得聪明”；要依赖有限动作集、明确字段语义和事件优先级。
